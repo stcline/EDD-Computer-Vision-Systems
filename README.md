@@ -101,6 +101,10 @@ All dates are approximate. Your instructor will confirm exact dates on Day 1.
 
 ## 📁 Repository Structure
 
+Create your own repository on GitHub (do not clone this one) and clone it on your raspberry pi.
+
+`git clone [your repo url]`
+
 Your repository must follow this structure. Create all folders on Day 1.
 
 ```
@@ -153,6 +157,8 @@ git add .
 git commit -m "Initial repo structure"
 git push
 ```
+
+### AT THE END OF EVERY DAY - Push your changes on your local repo to GitHub
 
 ***
 
@@ -221,11 +227,12 @@ There is no required split of tasks — partners may divide work however makes s
 
 ### Format
 
-Notebooks may be physical (paper, scanned and uploaded) or digital (Google Doc or Notion), but entries must be **dated, signed by both partners, and non-editable after the session ends** (i.e., no going back and changing old entries).
+Notebooks are physical in your PLTW Engineering Notebook. Entries must be **dated, signed by both partners, and non-editable after the session ends** (i.e., no going back and changing old entries).
 
 ### Required Header for Every Entry
 
 ```
+Title: CV Project - [entry number and title from below]
 Date: ___________
 Entry #: ___________
 Partner Names: ___________
@@ -240,6 +247,8 @@ Results / Observations:
 
 Next Steps:
 (What will you do next session, and what question do you still need to answer?)
+
+Bottom of page signatures, dates and other boxes complete.
 ```
 
 ### The 10 Required Entries
