@@ -147,17 +147,14 @@ sudo apt update && sudo apt upgrade -y
 # Install system-level dependencies OpenCV needs
 sudo apt install -y python3-full libopenblas-dev libblas-dev liblapack-dev libhdf5-dev libgtk-3-0 libcap-dev
 
-# Enable the camera interface
-sudo raspi-config
-# Navigate to: Interface Options → Legacy Camera (or Camera) → Enable
-# Reboot when prompted
+# Reboot the system    
 sudo reboot
 ```
 
 After reboot, reconnect via SSH and verify the camera is recognized:
 
 ```bash
-libcamera-still --list-cameras
+rpicam-still --list-cameras
 ```
 
 ---
