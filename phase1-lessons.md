@@ -138,27 +138,33 @@ source ~/.bashrc
 
 ---
 
-## 🔄 Part 4: OS Update & Camera Enable
+## 🔄 Part 4: OS Update & Camera Check
 
 ```bash
 # Update package lists and upgrade installed packages
 sudo apt update && sudo apt upgrade -y
 
 # Install system-level dependencies OpenCV needs
-sudo apt install -y python3-full libatlas-base-dev libhdf5-dev libgtk-3-0 libcap-dev
+sudo apt install -y python3-full libopenblas-dev libblas-dev liblapack-dev libhdf5-dev libgtk-3-0 libcap-dev
+```
 
-# Enable the camera interface
-sudo raspi-config
-# Navigate to: Interface Options → Legacy Camera (or Camera) → Enable
-# Reboot when prompted
+> **Note on system dependencies:** Newer Raspberry Pi OS releases (based on Debian Trixie) have dropped the older `libatlas-base-dev` package in favor of `libopenblas-dev`, `libblas-dev`, and `liblapack-dev`. If you're on an older OS image and `libatlas-base-dev` is available, it still works fine — but the packages above are the current standard and are safe to use on any recent image.
+
+Reboot to make sure everything is fully up to date:
+
+```bash
 sudo reboot
 ```
 
-After reboot, reconnect via SSH and verify the camera is recognized:
+> **Note on camera setup:** On current Raspberry Pi OS releases, the camera is enabled automatically and there is no longer a "Camera" toggle under Interface Options in `raspi-config` — this menu option has been removed as part of the platform's move away from the legacy `libcamera` stack toward the newer `rpicam-apps` tools. You do not need to manually enable anything; just plug in the camera ribbon cable (blue side facing the USB ports) before powering on the Pi.
+
+After reboot, reconnect via SSH and verify the camera is recognized using the current camera utility:
 
 ```bash
-libcamera-still --list-cameras
+rpicam-still --list-cameras
 ```
+
+If your camera is detected, you'll see its name (e.g., `imx219`) and supported resolution modes listed.
 
 ---
 
@@ -170,6 +176,8 @@ libcamera-still --list-cameras
 - **PEP 668:** A Python standard adopted in 2023 that prevents pip from installing packages into the system Python — this is why bare `pip install` fails on Bookworm
 - **`apt`:** The system package manager for Debian/Raspberry Pi OS; used for OS-level packages
 - **`pip`:** Python's package installer; used inside a virtual environment for Python libraries
+- **BLAS/LAPACK:** Standard linear algebra libraries that numerical packages like NumPy and OpenCV rely on for fast matrix math; OpenBLAS is the modern, actively maintained implementation
+- **`rpicam-apps`:** The current official Raspberry Pi camera software stack (replacing the legacy `libcamera-*` command-line tools) used to capture stills and video
 - **File permissions:** A Linux system controlling who can read, write, or execute each file (owner / group / others)
 - **Process:** A running program; each has a unique Process ID (PID)
 - **`~`:** Shorthand for the current user's home directory (e.g., `/home/pi`)
@@ -177,7 +185,7 @@ libcamera-still --list-cameras
 ## 📝 Next Steps
 
 - Confirm your `cv_env` virtual environment activates automatically on login
-- Verify `libcamera-still --list-cameras` shows your Pi Camera V2
+- Verify `rpicam-still --list-cameras` shows your Pi Camera V2
 - Complete **Engineering Notebook Entry #1:** Sketch the directory structure you built; document every command used in Parts 3 and 4; note any errors encountered and how you resolved them
 - Tomorrow: you will learn about the camera hardware itself and capture your first images with Python
 
@@ -187,7 +195,7 @@ libcamera-still --list-cameras
 - [PEP 668 Explanation & venv Fix — Raspberry Pi Forums](https://github.com/raspberrypi/bookworm-feedback/issues/4)
 - [Python venv Official Docs](https://docs.python.org/3/library/venv.html)
 - [Linux File Permissions Explained — linuxcommand.org](https://linuxcommand.org/lc3_lts0090.php)
-- [libcamera Documentation](https://libcamera.org/getting-started.html)
+- [rpicam-apps Documentation](https://www.raspberrypi.com/documentation/computers/camera_software.html)
 
 ---
 ---
@@ -291,20 +299,20 @@ Fill in this table for your own project idea. Measure the actual area the camera
 source ~/cv_env/bin/activate
 
 # Capture a still at full resolution
-libcamera-still -o ~/cv_project/images/test_full.jpg
+rpicam-still -o ~/cv_project/images/test_full.jpg
 
 # Capture at reduced resolution
-libcamera-still --width 1280 --height 720 -o ~/cv_project/images/test_720.jpg
+rpicam-still --width 1280 --height 720 -o ~/cv_project/images/test_720.jpg
 ```
 
 ### Capturing Video
 
 ```bash
 # Record 10 seconds of 1080p30 video
-libcamera-vid -t 10000 --width 1920 --height 1080 -o ~/cv_project/images/test_1080.h264
+rpicam-vid -t 10000 --width 1920 --height 1080 -o ~/cv_project/images/test_1080.h264
 
 # Record 10 seconds of 480p90 (better for CV — higher frame rate)
-libcamera-vid -t 10000 --width 640 --height 480 --framerate 90 -o ~/cv_project/images/test_480.h264
+rpicam-vid -t 10000 --width 640 --height 480 --framerate 90 -o ~/cv_project/images/test_480.h264
 ```
 
 ### Viewing Images via SCP
@@ -362,7 +370,7 @@ For CV to work reliably, consistent lighting matters more than resolution. A dif
 - [Official Raspberry Pi Camera Documentation](https://www.raspberrypi.com/documentation/accessories/camera.html)
 - [Raspberry Pi Camera V2 Specs — Waveshare](https://www.waveshare.com/rpi-camera-v2.htm)
 - [Lens FOV Calculator — Commonlands Optics](https://commonlands.com/pages/camera-fov-calculator)
-- [libcamera Documentation & CLI Reference](https://libcamera.org/getting-started.html)
+- [rpicam-apps Documentation & CLI Reference](https://www.raspberrypi.com/documentation/computers/camera_software.html)
 - [Understanding Camera Exposure — Cambridge in Colour](https://www.cambridgeincolour.com/tutorials/camera-exposure.htm)
 
 ---
