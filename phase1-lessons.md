@@ -145,7 +145,7 @@ source ~/.bashrc
 sudo apt update && sudo apt upgrade -y
 
 # Install system-level dependencies OpenCV needs
-sudo apt install -y python3-full libatlas-base-dev libhdf5-dev libgtk-3-0 libcap-dev
+sudo apt install -y python3-full libopenblas-dev libblas-dev liblapack-dev libhdf5-dev libgtk-3-0 libcap-dev
 
 # Enable the camera interface
 sudo raspi-config
