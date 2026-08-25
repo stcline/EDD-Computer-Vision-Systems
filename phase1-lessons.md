@@ -75,12 +75,6 @@ chmod +x myscript.py
 ./myscript.py
 ```
 
-The permission string `-rwxr-xr--` breaks down as:
-- `-` → regular file
-- `rwx` → owner can read, write, execute
-- `r-x` → group can read and execute
-- `r--` → others can only read
-
 ### Process Control
 
 ```bash
@@ -93,8 +87,12 @@ ps aux | grep python
 # Kill a runaway script by PID
 kill 1234
 
+# Force kill if it won't quit
+kill -9 1234
+
 # Kill by name
 pkill python3
+pkill -9 -f day3_live.py
 
 # Run a script and push it to the background
 python3 myscript.py &
@@ -103,20 +101,21 @@ python3 myscript.py &
 fg
 ```
 
+> **Troubleshooting tip:** If a graphical camera window won't close (a common issue over SSH/X11 forwarding), don't fight it — go to your terminal and press `Ctrl+C`, or open a second SSH session and force-kill the process with `pkill -9 -f <script_name>.py`.
+
 ---
 
 ## 🐍 Part 3: Virtual Environment Setup
 
-Starting with Raspberry Pi OS Bookworm, plain `pip install` is blocked at the system level to protect OS packages. The correct solution — and professional best practice — is to use a **Python virtual environment**.
+Starting with Raspberry Pi OS Bookworm, plain `pip install` is blocked at the system level to protect OS packages. The correct solution is a **Python virtual environment** — but for computer vision work on the Pi, it must be created with access to system packages, since key camera libraries (`libcamera`, `picamera2`) are only distributed via `apt`, not `pip`.
 
 ```bash
-# Create the virtual environment (do this once)
-python3 -m venv ~/cv_env
+# Create the virtual environment WITH system site-packages access
+python3 -m venv ~/cv_env --system-site-packages
 
 # Activate it (do this every session)
 source ~/cv_env/bin/activate
 
-# Your prompt will change to show (cv_env) — you are now inside the venv
 # Install a test package
 pip install numpy
 
@@ -129,8 +128,6 @@ deactivate
 
 ### Make Activation Automatic
 
-So you never forget to activate the venv, add it to your shell startup file:
-
 ```bash
 echo "source ~/cv_env/bin/activate" >> ~/.bashrc
 source ~/.bashrc
@@ -138,17 +135,18 @@ source ~/.bashrc
 
 ---
 
-## 🔄 Part 4: OS Update & Camera Check
+## 🔄 Part 4: OS Update, System Dependencies & Camera Check
 
 ```bash
 # Update package lists and upgrade installed packages
 sudo apt update && sudo apt upgrade -y
 
-# Install system-level dependencies OpenCV needs
-sudo apt install -y python3-full libopenblas-dev libblas-dev liblapack-dev libhdf5-dev libgtk-3-0 libcap-dev
+# Install system-level dependencies OpenCV and picamera2 need
+sudo apt install -y python3-full libopenblas-dev libblas-dev liblapack-dev \
+  libhdf5-dev libgtk-3-0 libcap-dev python3-libcamera python3-picamera2
 ```
 
-> **Note on system dependencies:** Newer Raspberry Pi OS releases (based on Debian Trixie) have dropped the older `libatlas-base-dev` package in favor of `libopenblas-dev`, `libblas-dev`, and `liblapack-dev`. If you're on an older OS image and `libatlas-base-dev` is available, it still works fine — but the packages above are the current standard and are safe to use on any recent image.
+> **Note on system dependencies:** Newer Raspberry Pi OS releases (based on Debian Trixie) have dropped the older `libatlas-base-dev` package in favor of `libopenblas-dev`, `libblas-dev`, and `liblapack-dev`. `libcap-dev` is required to build picamera2's dependencies. `python3-libcamera` and `python3-picamera2` are installed at the system level — this is why your venv needs `--system-site-packages` to see them.
 
 Reboot to make sure everything is fully up to date:
 
@@ -156,7 +154,7 @@ Reboot to make sure everything is fully up to date:
 sudo reboot
 ```
 
-> **Note on camera setup:** On current Raspberry Pi OS releases, the camera is enabled automatically and there is no longer a "Camera" toggle under Interface Options in `raspi-config` — this menu option has been removed as part of the platform's move away from the legacy `libcamera` stack toward the newer `rpicam-apps` tools. You do not need to manually enable anything; just plug in the camera ribbon cable (blue side facing the USB ports) before powering on the Pi.
+> **Note on camera setup:** On current Raspberry Pi OS releases, the camera is enabled automatically and there is no longer a "Camera" toggle under Interface Options in `raspi-config` — this menu option has been removed as part of the platform's move away from the legacy `libcamera-still`/`libcamera-vid` command-line tools toward the newer `rpicam-apps` tools. You do not need to manually enable anything; just plug in the camera ribbon cable (blue side facing the USB ports) before powering on the Pi.
 
 After reboot, reconnect via SSH and verify the camera is recognized using the current camera utility:
 
@@ -166,6 +164,21 @@ rpicam-still --list-cameras
 
 If your camera is detected, you'll see its name (e.g., `imx219`) and supported resolution modes listed.
 
+### Install Python CV Libraries
+
+Now install your Python packages inside the activated venv:
+
+```bash
+source ~/cv_env/bin/activate
+pip install opencv-python mediapipe
+```
+
+Confirm everything can be imported together:
+
+```bash
+python3 -c "import cv2; import libcamera; import picamera2; print('All modules OK')"
+```
+
 ---
 
 ## 💻 Terms to Know
@@ -173,19 +186,23 @@ If your camera is detected, you'll see its name (e.g., `imx219`) and supported r
 - **SSH (Secure Shell):** A protocol for securely accessing another computer over a network using an encrypted terminal connection
 - **BASH:** The default command-line shell on Linux/Raspberry Pi OS; stands for Bourne Again SHell
 - **Virtual environment (venv):** An isolated Python environment that keeps a project's libraries separate from the system Python installation
+- **`--system-site-packages`:** A venv creation flag that allows the virtual environment to also see packages installed at the system level (needed for `libcamera`/`picamera2`)
 - **PEP 668:** A Python standard adopted in 2023 that prevents pip from installing packages into the system Python — this is why bare `pip install` fails on Bookworm
 - **`apt`:** The system package manager for Debian/Raspberry Pi OS; used for OS-level packages
 - **`pip`:** Python's package installer; used inside a virtual environment for Python libraries
 - **BLAS/LAPACK:** Standard linear algebra libraries that numerical packages like NumPy and OpenCV rely on for fast matrix math; OpenBLAS is the modern, actively maintained implementation
-- **`rpicam-apps`:** The current official Raspberry Pi camera software stack (replacing the legacy `libcamera-*` command-line tools) used to capture stills and video
+- **`rpicam-apps`:** The current official Raspberry Pi camera software stack (replacing the legacy `libcamera-*` command-line tools) used to capture stills and video from the terminal
+- **`picamera2`:** The official Python library for controlling the Pi camera via the modern `libcamera` stack; required because OpenCV's `cv2.VideoCapture()` cannot talk to the Pi Camera Module directly
 - **File permissions:** A Linux system controlling who can read, write, or execute each file (owner / group / others)
 - **Process:** A running program; each has a unique Process ID (PID)
+- **`SIGKILL` (`kill -9`):** A forceful process-termination signal that cannot be ignored, used when a normal `kill` or `Ctrl+C` fails to close a hung program
 - **`~`:** Shorthand for the current user's home directory (e.g., `/home/pi`)
 
 ## 📝 Next Steps
 
 - Confirm your `cv_env` virtual environment activates automatically on login
 - Verify `rpicam-still --list-cameras` shows your Pi Camera V2
+- Confirm `python3 -c "import cv2; import libcamera; import picamera2; print('All modules OK')"` prints successfully
 - Complete **Engineering Notebook Entry #1:** Sketch the directory structure you built; document every command used in Parts 3 and 4; note any errors encountered and how you resolved them
 - Tomorrow: you will learn about the camera hardware itself and capture your first images with Python
 
@@ -196,6 +213,7 @@ If your camera is detected, you'll see its name (e.g., `imx219`) and supported r
 - [Python venv Official Docs](https://docs.python.org/3/library/venv.html)
 - [Linux File Permissions Explained — linuxcommand.org](https://linuxcommand.org/lc3_lts0090.php)
 - [rpicam-apps Documentation](https://www.raspberrypi.com/documentation/computers/camera_software.html)
+- [Picamera2 Manual — Raspberry Pi](https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf)
 
 ---
 ---
@@ -383,7 +401,7 @@ For CV to work reliably, consistent lighting matters more than resolution. A dif
 The goal of this lab assignment is to get hands-on with OpenCV — the open-source computer vision library that powers most of the CV techniques in this unit. You will open a live camera feed, manipulate frames in real time, and build the basic pipeline that every future lab will extend. 🚀
 
 By the end of this session you and your partner should be able to:
-- Open and display a live camera feed using Python and OpenCV
+- Open and display a live camera feed using Python, Picamera2, and OpenCV
 - Perform core image operations: resize, color space conversion, blur, and annotation
 - Understand why the HSV color space is preferred over RGB for CV tasks
 - Write a complete Python script that captures, processes, and saves an annotated image
@@ -392,7 +410,7 @@ By the end of this session you and your partner should be able to:
 
 ## 🐍 Part 1: OpenCV Install & First Image
 
-### Install OpenCV in Your venv
+### Confirm OpenCV Is Installed in Your venv
 
 ```bash
 source ~/cv_env/bin/activate
@@ -426,34 +444,42 @@ cv2.destroyAllWindows()
 
 ## 🎥 Part 2: Live Camera Feed
 
-### The Capture Loop
+### Why Not `cv2.VideoCapture()`?
 
-This is the fundamental pattern for all real-time CV — every future script builds on this loop:
+You might expect to open the camera with OpenCV's built-in `cv2.VideoCapture(0)` — but on current Raspberry Pi OS, **this will not work with the Pi Camera Module**. `cv2.VideoCapture()` only supports standard USB/V4L2 webcams; the Pi Camera runs on the `libcamera` stack, which OpenCV cannot access directly. Attempting it will produce a `Failed to grab frame` error even though the camera itself is working fine.
+
+### The Correct Pattern: Picamera2 + OpenCV
+
+Instead, we use **Picamera2** (the official library for the modern camera stack) to capture each frame, then hand that frame to OpenCV for processing and display. This is the pattern every script for the rest of the unit will follow.
 
 ```python
 import cv2
+from picamera2 import Picamera2
 
-cap = cv2.VideoCapture(0)   # 0 = first camera device
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(
+    main={"format": 'XRGB8888', "size": (640, 480)}
+))
+picam2.start()
 
-# Set resolution
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+try:
+    while True:
+        frame = picam2.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)  # convert to OpenCV's format
 
-while True:
-    ret, frame = cap.read()     # Read one frame
-    if not ret:
-        print("Failed to grab frame")
-        break
+        # --- All processing happens here ---
+        cv2.imshow('Live Feed', frame)
 
-    # --- All processing happens here ---
-    cv2.imshow('Live Feed', frame)
+        # Press 'q' (with the window focused) to quit
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+except KeyboardInterrupt:
+    print("Interrupted by user")
 
-cap.release()
-cv2.destroyAllWindows()
+finally:
+    picam2.stop()
+    cv2.destroyAllWindows()
 ```
 
 Save as `~/cv_project/scripts/day3_live.py` and run:
@@ -462,11 +488,13 @@ Save as `~/cv_project/scripts/day3_live.py` and run:
 python3 ~/cv_project/scripts/day3_live.py
 ```
 
+> **Closing the window:** Click directly on the video window first so it has keyboard focus, then press `q`. If the window becomes unresponsive (a known issue with SSH/X11-forwarded OpenCV windows, which have no real window manager controlling them), press `Ctrl+C` in the terminal instead — the `try`/`except`/`finally` block above ensures the camera and window are released cleanly either way. If it's still stuck, open a second SSH session and run `pkill -9 -f day3_live.py`.
+
 ---
 
 ## 🎨 Part 3: Core Image Operations
 
-Add each of these operations *inside* the while loop, one at a time. Observe the effect before adding the next one.
+Add each of these operations *inside* the while loop, one at a time, right after the `frame = cv2.cvtColor(...)` line. Observe the effect before adding the next one.
 
 ### Resize
 
@@ -539,16 +567,16 @@ result = cv2.bitwise_and(frame, frame, mask=mask)
 
 ## 🧪 Part 5: Lab Challenge
 
-Build a complete script `~/cv_project/scripts/day3_annotated.py` that:
+Build a complete script `~/cv_project/scripts/day3_annotated.py` (based on the Picamera2 pattern from Part 2) that:
 
-1. Opens the live camera feed at 640×480
+1. Opens the live camera feed at 640×480 using Picamera2
 2. On each frame, displays:
    - Your team name in the top-left corner
    - Current frame dimensions (width × height) in the bottom-left corner
    - A timestamp using Python's `datetime` module in the top-right corner
 3. Converts the frame to HSV and displays the HSV version side-by-side with the original using `cv2.hconcat([frame, cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)])`
 4. When the user presses `s`, saves the current frame to `~/cv_project/images/snapshot.jpg`
-5. When the user presses `q`, quits cleanly
+5. When the user presses `q`, quits cleanly (use the `try`/`finally` pattern from Part 2)
 
 **Hint for timestamp:**
 ```python
@@ -561,14 +589,14 @@ timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 ## 💻 Terms to Know
 
 - **OpenCV:** Open Source Computer Vision Library; a Python/C++ library for real-time image and video processing
+- **Picamera2:** The official Python library for controlling the Raspberry Pi Camera via the `libcamera` stack; used to capture frames that are then handed to OpenCV
 - **Frame:** A single image captured from a video stream; video is a sequence of frames displayed at a set frame rate
 - **BGR:** Blue-Green-Red — OpenCV's default channel order (note: *not* RGB like most other tools)
 - **HSV:** Hue-Saturation-Value color model; preferred for color-based CV because it separates color (hue) from brightness (value)
 - **Mask:** A binary image (pixels are either 0 or 255) used to isolate regions of interest in another image
 - **Kernel:** In image processing, a small matrix applied across an image to perform operations like blur or edge detection
 - **Contour:** A curve joining all continuous points along a boundary with the same color or intensity
-- **`cv2.VideoCapture`:** The OpenCV class for reading video from a camera or file
-- **`cv2.waitKey(1)`:** Waits 1 ms for a key press; essential in the capture loop to allow the display to refresh
+- **`cv2.waitKey(1)`:** Waits 1 ms for a key press; essential in the capture loop to allow the display to refresh; only receives keys when the display window has focus
 - **Headless:** Running a Raspberry Pi without a monitor, accessed only via SSH
 
 ## 📝 Next Steps
@@ -581,7 +609,7 @@ timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 - [OpenCV Official Python Documentation](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html)
 - [OpenCV Python Tutorials — PyImageSearch](https://pyimagesearch.com/start-here/)
-- [Intro to OpenCV with Raspberry Pi — Circuit Rocks](https://learn.circuit.rocks/introduction-to-opencv-using-the-raspberry-pi)
+- [Picamera2 Manual — Raspberry Pi](https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf)
 - [HSV Color Space Explained — LearnOpenCV](https://learnopencv.com/color-spaces-in-opencv-cpp-python/)
 - [Install OpenCV on Raspberry Pi — Random Nerd Tutorials](https://randomnerdtutorials.com/install-opencv-raspberry-pi/)
 
