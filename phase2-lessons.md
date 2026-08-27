@@ -70,11 +70,24 @@ try:
         mask = cv2.inRange(hsv, lower, upper)
         result = cv2.bitwise_and(frame, frame, mask=mask)
 
+        # NOTE: OpenCV trackbar sliders do NOT display their numeric value
+        # anywhere in the window -- only the slider position is shown visually.
+        # This overlay prints the live values directly on the video feed so
+        # you can read off your tuned HSV range once the Mask looks clean.
+        readout = f"H:{h_min}-{h_max} S:{s_min}-{s_max} V:{v_min}-{v_max}"
+        cv2.putText(frame, readout, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
         cv2.imshow('Original', frame)
         cv2.imshow('Mask', mask)
         cv2.imshow('Result', result)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # NOTE: waitKey delay increased from 1ms to 20ms.
+        # With 4 windows open (Trackbars, Original, Mask, Result), the extra
+        # render overhead per loop made a 1ms window too easy to miss,
+        # causing 'q' presses to not register reliably. 20ms fixes this
+        # without introducing any noticeable lag in the live feed.
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -85,11 +98,15 @@ finally:
     cv2.destroyAllWindows()
 ```
 
+> **Troubleshooting — windows not closing with 'q':** If pressing `q` doesn't close the windows, click directly on the **Original** or **Mask** window (not the Trackbars window) to make sure it has keyboard focus, then press `q`. This lesson's script uses a `waitKey(20)` delay instead of `waitKey(1)` specifically because more open windows means more rendering work per loop, which can cause a very short 1ms keypress check to be missed. If it's still stuck, force-quit from the terminal with `Ctrl+C`, or from a second SSH session run `pkill -9 -f color_tracking.py`.
+
+> **Where do the HSV numbers actually show up?** OpenCV trackbar windows only show the slider handle position — there is no built-in numeric readout on the Trackbars window itself. The `readout` text overlay added above prints the live H/S/V min/max values directly onto the **Original** window so you can read your tuned range once the Mask looks clean.
+
 ### Lab Activity: Tune to a Real Object
 
 - Place a brightly colored object (a ball, marker cap, sticky note) in front of the camera
 - Adjust the trackbars until only your object appears white in the **Mask** window and everything else is black
-- Record the six values that worked in your notebook — you'll hard-code these into the next script
+- Read the six values from the text overlay on the **Original** window and record them in your notebook — you'll hard-code these into the next script
 
 ---
 
@@ -103,6 +120,7 @@ import numpy as np
 from picamera2 import Picamera2
 
 # Replace these with YOUR tuned values from Part 2
+# (read off the on-screen text overlay while tuning the trackbars)
 LOWER = np.array([35, 100, 100])
 UPPER = np.array([85, 255, 255])
 
@@ -139,7 +157,7 @@ try:
 
         cv2.imshow('Color Tracking', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -162,12 +180,13 @@ finally:
 ## 💻 Terms to Know
 
 - **HSV mask:** A binary (black/white) image showing only pixels that fall within a specified Hue-Saturation-Value range
-- **Trackbar:** An interactive GUI slider in OpenCV used to adjust a numeric parameter live
+- **Trackbar:** An interactive GUI slider in OpenCV used to adjust a numeric parameter live; note that OpenCV does not display the numeric value on the trackbar window itself, only the slider position
 - **Erosion/Dilation:** Morphological operations that shrink (erode) or grow (dilate) white regions in a binary mask; used together to remove small noise blobs
 - **Contour:** A curve that traces the outline of a connected white region in a binary mask
 - **Centroid:** The geometric center point of a shape, calculated from image moments
 - **Image moments:** Mathematical properties of a shape (area, center of mass) calculated from pixel positions
 - **Bounding shape:** A geometric shape (circle, rectangle) drawn around a detected region to visualize its location and size
+- **`cv2.waitKey(ms)`:** Pauses execution for the given number of milliseconds while checking for a keypress; larger values give more reliable key detection at a small cost to loop speed
 
 ## 📝 Next Steps
 
@@ -275,7 +294,7 @@ try:
 
         cv2.imshow('Shape Detection', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -325,7 +344,7 @@ try:
 
         cv2.imshow('Circle Detection', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -484,7 +503,7 @@ try:
 
         cv2.imshow('Object Detection', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -660,7 +679,7 @@ try:
 
         cv2.imshow('Detection Logger', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -795,7 +814,7 @@ try:
 
         cv2.imshow('Pose Estimation', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -972,7 +991,7 @@ try:
 
         cv2.imshow('Rep Counter', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -1080,7 +1099,7 @@ try:
 
         cv2.imshow('Face Detection', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -1104,6 +1123,8 @@ finally:
 Haar Cascades only give you a bounding box. **MediaPipe Face Mesh** maps **468 individual points** across the face — useful for expression analysis, filters, or precise measurements.
 
 > **Reminder:** This requires MediaPipe, so confirm your Python version compatibility from Day 9 before proceeding.
+
+Create `~/cv_project/scripts/face_mesh.py`:
 
 ```python
 import cv2
@@ -1142,7 +1163,7 @@ try:
 
         cv2.imshow('Face Mesh', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
@@ -1178,7 +1199,7 @@ Facial detection and recognition technology raises real ethical questions your c
 
 ## 📝 Next Steps
 
-- Push `face_detect.py` and your Face Mesh script to GitHub
+- Push `face_detect.py` and `face_mesh.py` to GitHub
 - Tomorrow: you'll move from detecting *that* a face is present to recognizing *whose* face it is
 
 ## 📚 Resources
@@ -1292,7 +1313,7 @@ try:
 
         cv2.imshow('Face Recognition', frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
 except KeyboardInterrupt:
