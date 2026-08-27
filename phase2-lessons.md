@@ -64,6 +64,7 @@ try:
         s_max = cv2.getTrackbarPos('S Max', 'Trackbars')
         v_min = cv2.getTrackbarPos('V Min', 'Trackbars')
         v_max = cv2.getTrackbarPos('V Max', 'Trackbars')
+        print(f"H: {h_min}-{h_max}  S: {s_min}-{s_max}  V: {v_min}-{v_max}", end='\r')
 
         lower = np.array([h_min, s_min, v_min])
         upper = np.array([h_max, s_max, v_max])
